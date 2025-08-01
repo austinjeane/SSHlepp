@@ -1,8 +1,8 @@
 # SSHlepp - Terminal SSH File Browser & Copy Tool
 
-A powerful terminal UI application for browsing and copying files between local and remote servers via SSH, built with [Bubble Tea](https://github.com/charmbracelet/bubbletea).
+A terminal UI application for browsing and copying files between local and remote servers via SSH, built with [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
-![SSHlepp Demo](https://via.placeholder.com/800x400/1e1e1e/ffffff?text=SSHlepp+Demo)
+![SSHlepp Screenshot](./examples/screenshot.png)
 
 ## ✨ Features
 
@@ -20,7 +20,7 @@ A powerful terminal UI application for browsing and copying files between local 
 
 - Go 1.19 or later
 - SSH client configured with key-based authentication
-- Access to remote servers via SSH
+- Remote hosts saved in .ssh/config
 
 ### Installation
 
@@ -180,17 +180,6 @@ Run with verbose logging:
 SSHLEPP_DEBUG=1 ./sshlepp
 ```
 
-## 📋 Roadmap
-
-- [ ] Resume interrupted transfers
-- [ ] Background copy operations
-- [ ] File preview functionality
-- [ ] Directory synchronization
-- [ ] Bookmark management
-- [ ] Custom themes and styling
-- [ ] File search and filtering
-- [ ] Batch rename operations
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -203,12 +192,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Go SSH](https://golang.org/x/crypto/ssh) - SSH client implementation
 - [SFTP](https://github.com/pkg/sftp) - SFTP client library
 
-## 📞 Support
-
-- Create an [issue](https://github.com/austinjeane/SSHlepp/issues) for bug reports
-- Start a [discussion](https://github.com/austinjeane/SSHlepp/discussions) for questions
-- Follow [@austinjeane](https://github.com/austinjeane) for updates
-
----
-
-**Made with ❤️ and Go**

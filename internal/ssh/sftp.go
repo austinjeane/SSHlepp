@@ -61,6 +61,42 @@ func NewClient(host SSHHost) (*Client, error) {
 	}, nil
 }
 
+// Add this new function to support passphrase
+func NewClientWithPassphrase(host SSHHost, passphrase string) (*Client, error) {
+	// Try to read SSH private key with passphrase
+	key, err := readPrivateKeyWithPassphrase(passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key: %w", err)
+	}
+
+	config := &ssh.ClientConfig{
+		User: host.User,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(key),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: Implement proper host key checking
+		Timeout:         30 * time.Second,
+	}
+
+	addr := fmt.Sprintf("%s:%d", host.Hostname, host.Port)
+	sshClient, err := ssh.Dial("tcp", addr, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to SSH server: %w", err)
+	}
+
+	sftpClient, err := sftp.NewClient(sshClient)
+	if err != nil {
+		sshClient.Close()
+		return nil, fmt.Errorf("failed to create SFTP client: %w", err)
+	}
+
+	return &Client{
+		sshClient:  sshClient,
+		sftpClient: sftpClient,
+		host:       host,
+	}, nil
+}
+
 // Close closes the SSH and SFTP connections
 func (c *Client) Close() error {
 	if c.sftpClient != nil {
@@ -92,8 +128,13 @@ func (c *Client) ListDir(path string) ([]FileInfo, error) {
 	return result, nil
 }
 
-// readPrivateKey reads the SSH private key
+// readPrivateKey reads the SSH private key, with optional passphrase support
 func readPrivateKey() (ssh.Signer, error) {
+	return readPrivateKeyWithPassphrase("")
+}
+
+// readPrivateKeyWithPassphrase reads the SSH private key with optional passphrase
+func readPrivateKeyWithPassphrase(passphrase string) (ssh.Signer, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
@@ -104,24 +145,36 @@ func readPrivateKey() (ssh.Signer, error) {
 		filepath.Join(home, ".ssh", "id_ed25519"),
 		filepath.Join(home, ".ssh", "id_ecdsa"),
 	}
+	errors := map[string]error{}
 
 	for _, keyPath := range keyPaths {
 		if _, err := os.Stat(keyPath); err == nil {
 			key, err := os.ReadFile(keyPath)
 			if err != nil {
+				errors["failed to read private key"] = err
 				continue
 			}
 
+			// First try without passphrase
 			signer, err := ssh.ParsePrivateKey(key)
-			if err != nil {
-				continue
+			if err == nil {
+				return signer, nil
 			}
 
-			return signer, nil
+			// If parsing failed, it might be password-protected
+			if passphrase != "" {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(passphrase))
+				if err == nil {
+					return signer, nil
+				}
+			}
+
+			// Store the error to potentially trigger password prompt
+			errors["failed to parse private key"] = err
 		}
 	}
 
-	return nil, fmt.Errorf("no valid private key found")
+	return nil, fmt.Errorf("no valid private key found. Please check your SSH keys in %s/.ssh. Errors: %v", home, errors)
 }
 
 // ListLocalDir lists files in a local directory
